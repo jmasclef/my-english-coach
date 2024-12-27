@@ -1,5 +1,3 @@
-Here's a sample `README.md` file for your chatbot project:
-
 **My personal english coach**
 =============================
 
@@ -8,9 +6,15 @@ A fully self-hosted conversational chatbot built on a customized LLama 3.2 LLM a
 **Overview**
 ------------
 
-Enjoy instant, unlimited chat with a personalized conversational agent to help you develop your spoken English. It gives you personalized advice to help you improve your conversational skills. This chatbot is always available and powered for discussions in English, while benefiting from the general culture of an LLM. What's more, it's completely free and keeps no conversation history. 
-This self-hosted chatbot integrates OpenAI Whisper for speech recognition and coqui-TTS for text-to-speech, providing excellent performance/resource ratios. Speech-to-text (STT) transcribes the user's speech into text. The transcribed text is analyzed by the customized LLM: it takes into account the speech-to-text limitations, suggests linguistic corrections and feeds the conversation. Chatbot responses are generated in real time using an asynchronous background process that parallelizes the generation of text and audio files.
-The application features a local client in console mode, as well as a web client/server solution containing a lightweight chat room website.
+Enjoy instant, unlimited chat with a personalized conversational agent to help you develop your spoken English.  
+It gives you personalized advice to help you improve your conversational skills.  
+This chatbot is always available and powered for discussions in English, while benefiting from the general culture of an LLM. 
+What's more, it's completely free and keeps no conversation history.     
+This self-hosted chatbot integrates OpenAI Whisper for speech recognition and coqui-TTS for text-to-speech, providing excellent performance/resource ratios.  
+Speech-to-text (STT) transcribes the user's speech into text.  
+The transcribed text is analyzed by the customized LLM: it takes into account the speech-to-text limitations, suggests linguistic corrections and feeds the conversation.  
+Chatbot responses are generated in real time using an asynchronous background process that parallelizes the generation of text and audio files.    
+The application features a local client in console mode, as well as a web client/server solution containing a lightweight chat room website.  
 
 
 **Dependencies**
