@@ -1,0 +1,28 @@
+# Speech-To-Text solution
+openai-whisper
+
+# Four sounds
+PyAudio
+SpeechRecognition
+soundfile   # to read audio wave streamed
+sounddevice # to play audio
+numpy       # to convert audio data
+
+pydub
+
+# LLM
+ollama
+asyncio
+
+# For torch with CUDA, depends on GPU and driver !! Check cuda version to install
+# pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+
+# Logging
+# logging installed by others
+
+# Text-To-Speech solution
+coqui-tts
+
+fastapi
+uvicorn
+python-multipart

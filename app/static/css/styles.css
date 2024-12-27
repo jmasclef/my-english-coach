@@ -1,0 +1,208 @@
+/* Global Theme Parameters */
+:root {
+    /* Colors */
+    --background-color: #f7f7f7;
+    --chat-background-color: #1b2429; /* Chat container background */
+    --message-user-bg: #414850; /* Background color for user messages */
+    --message-assistant-bg: #414850; /* Background color for assistant messages */
+    --user-message-color: #CCCCCC; /* Text color for user messages */
+    --assistant-message-color: #CCCCCC; /* Text color for assistant messages */
+    --border-color: #CCCCCC; /* Border color for messages */
+    --message-border-radius: 10px; /* Border radius for message bubbles */
+    --message-border-width: 2px; /* Border width for bubbles */
+    --message-padding: 10px 15px;
+    --message-max-width: 75%;
+    --action-bar-bg: #f66572; /* Background color for action bar */
+    --record-button-bg: #4caf50;
+    --record-button-hover-bg: #45a049;
+    --recording-bg: #e57373;
+    --processing-bg: #ffc107;
+    --spinner-color: white;
+    --text-color: #333;
+    --font-family: Arial, sans-serif;
+    --font-size-medium: 16px;
+    --font-size-large: 18px;
+    --box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+    --border-radius: 8px;
+
+    /* Font Style */
+    --user-font-weight: normal; /* User font weight */
+    --assistant-font-weight: bold; /* Assistant font weight */
+    --user-font-style: normal; /* User font style */
+    --assistant-font-style: italic; /* Assistant font style */
+
+    /* Spacing */
+    --message-gap: 10px; /* Gap between messages */
+}
+
+/* Global Styles */
+body {
+    margin: 0;
+    font-family: var(--font-family);
+    background-color: var(--background-color);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    color: var(--text-color);
+}
+
+/* Chat Container */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    max-width: 600px;
+    margin: auto;
+    box-shadow: var(--box-shadow);
+    background-color: var(--chat-background-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+/* Messages Area */
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--message-gap); /* Use gap for spacing between bubbles */
+    background-color: var(--chat-background-color);
+}
+
+/* Message Bubble */
+.message {
+    padding: var(--message-padding);
+    border-radius: var(--message-border-radius);
+    max-width: var(--message-max-width);
+    line-height: 1.5;
+    word-wrap: break-word;
+    box-shadow: var(--box-shadow);
+    border: var(--message-border-width) solid var(--border-color);
+}
+
+/* User Message (Right-aligned with comic-style corner) */
+.message.user {
+    align-self: flex-end;
+    background-color: var(--message-user-bg);
+    color: var(--user-message-color);
+    position: relative;
+    font-weight: var(--user-font-weight);
+    font-style: var(--user-font-style);
+}
+
+/* Assistant Message (Left-aligned with comic-style corner) */
+.message.assistant {
+    align-self: flex-start;
+    background-color: var(--message-assistant-bg);
+    border: var(--message-border-width) solid var(--border-color);
+    color: var(--assistant-message-color);
+    position: relative;
+    font-weight: var(--assistant-font-weight);
+    font-style: var(--assistant-font-style);
+}
+
+/* Action Bar */
+.action-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--action-bar-bg);
+    padding: 10px;
+}
+
+/* Record Button */
+.record-button {
+    background-color: var(--record-button-bg);
+    color: white;
+    border: none;
+    width: 60px;
+    height: 60px;
+    font-size: 30px;
+    border-radius: 50%;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.record-button:hover {
+    background-color: var(--record-button-hover-bg);
+    transform: scale(1.1);
+}
+
+.record-button:active {
+    transform: scale(1);
+}
+
+/* Recording State */
+.record-button.recording {
+    background-color: var(--recording-bg); /* Soft red for recording */
+}
+
+/* Processing State (Spinner) */
+.record-button.processing {
+    background-color: var(--processing-bg); /* Yellow for processing */
+    pointer-events: none; /* Prevent clicks during processing */
+}
+
+.spinner {
+    border: 4px solid transparent;
+    border-top: 4px solid var(--spinner-color);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+}
+
+/* Keyframes for spinner animation */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Processing Message */
+.processing-message {
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    font-weight: bold;
+    font-style: italic;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 10px 20px;
+    border-radius: var(--border-radius);
+    font-family: var(--font-family);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -150%);
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+}
+
+.processing-message.show {
+    opacity: 1;
+}
+
+/* Adjustments for Mobile Devices */
+@media (max-width: 600px) {
+    .action-bar {
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        background-color: transparent;
+    }
+
+    .record-button {
+        width: 70px;
+        height: 70px;
+        font-size: 30px;
+    }
+
+    .messages {
+        margin-bottom: 150px; /* Ensure space for the button */
+    }
+}
