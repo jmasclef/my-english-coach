@@ -13,18 +13,38 @@ This self-hosted chatbot integrates OpenAI Whisper for speech recognition and co
 The application features a local client in console mode, as well as a web client/server solution containing a lightweight chat room website.
 
 
+**Dependencies**
+----------------
+
+This application is based on:
+* A local Ollama server provided with Llama3.2 ~2Go
+* NVIDIA GPU with driver
+* Python packages including PyTorch with cuda ~6Go
+* OpenAI whisper package with model (base ~150Mo, turbo ~1,6Go)
+* Coqui-TTS package with model ~1Go
+
+The whole installation use ~10Go
+
+
 **Features**
 ------------
 
-* Conversational AI chatbot
+* Conversational audio real-time AI chatbot
 * Speech-to-text technology using OpenAI Whisper
-* Response generation using Coqui-TTS and a Large Language Model (LLM)
-* Real-time response generation using an async background process
-* Integration with FastAPI framework for efficient and scalable development
+* Response generation using a Large Language Model (LLM) customised to act as an english coach
+* Asynchronous and paralleled processes for LLM token generation and audio chunks preparation
+* Integration with FastAPI framework for self-hosted split client/server
 
 **Installation**
 ---------------
-
+Install Ollama
+Pull Llama3.2:latest
+Build customised model
+Remove Llama3.2
+To build local virtual python environment:
+```bash
+python -m venv .venv
+```
 To install the dependencies required for this project, run the following command:
 ```bash
 pip install -r requirements.txt
@@ -34,9 +54,10 @@ This will install all the necessary packages, including FastAPI, OpenAI Whisper,
 **Running the Chatbot**
 ----------------------
 
-To run the chatbot, execute the following command:
+To run the chatbot using web server, execute the following command:
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8000
+cd app
+uvicorn main:app --host 127.0.0.1 --port 8080
 ```
 This will start the FastAPI development server on port 8000.
 
