@@ -63,15 +63,15 @@ class ChatbotServer:
         if lang == 'fr':
             self.model = 'llama3.2'
         else:
-            self.model = 'english_teacher_model:latest'
+            self.model = 'english_coach_model:latest'
 
         self._async_ollama_client = OllamaAsyncClient(host=ollama_server)
 
         self.whisper_model = None
         self.language = lang
         logger.info('Now loading WHISPER model')
-        #self.whisper_model = whisper.load_model("base", download_root=WHISPER_STT_MODELS_PATH)   # Default path is "C:\Users\USER\.cache\whisper"
-        self.whisper_model = whisper.load_model("turbo", download_root=WHISPER_STT_MODELS_PATH) # Turbo is a bit faster but x6 bigger
+        self.whisper_model = whisper.load_model("base", download_root=WHISPER_STT_MODELS_PATH)   # Default path is "C:\Users\USER\.cache\whisper"
+        # self.whisper_model = whisper.load_model("turbo", download_root=WHISPER_STT_MODELS_PATH) # Turbo is a bit faster but x6 bigger
         logger.info('WHISPER model is loaded')
 
         speakers = ['Asya Anara', 'Gitta Nikolina', 'Sofia Hellen', 'Uta Obando',

@@ -1,2 +1,2 @@
-ollama create english_teacher_model -f ./Modelfile
+ollama create english_coach_model -f ./Modelfile
 

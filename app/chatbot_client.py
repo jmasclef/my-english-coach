@@ -35,7 +35,7 @@ class ChatbotClient:
         if lang == 'fr':
             self.model = 'llama3.2'
         else:
-            self.model = 'english_teacher_model:latest'
+            self.model = 'english_coach_model:latest'
 
         self.use_kb = use_kb
         self.use_print = use_print
