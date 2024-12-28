@@ -5,7 +5,7 @@ A fully self-hosted conversational chatbot built on a customized LLama 3.2 LLM a
 
 # Videos
 YouTube video demo - local website  
-https://youtu.be/1djhkElBzwQ
+https://www.youtube.com/shorts/ov97UJniI5M
 
 YouTube video demo - console mode  
 https://youtu.be/u1os7qTb7eU
