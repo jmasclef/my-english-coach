@@ -3,6 +3,14 @@
 
 A fully self-hosted conversational chatbot built on a customized LLama 3.2 LLM and wrapped with OpenAI Whisper and Coqui-TTS for real-time speech-to-text and text-to-speech conversions.
 
+# Videos
+YouTube video demo - local website  
+https://youtu.be/1djhkElBzwQ
+
+YouTube video demo - console mode  
+https://youtu.be/u1os7qTb7eU
+
+
 # Overview
 
 Enjoy instant, unlimited chat with a personalized conversational agent to help you develop your spoken English.  
@@ -105,6 +113,8 @@ The whole installation will use ~10Go:
 # Features
 
 * Conversational, _speech-to-speech_, real-time AI chatbot
+* Split solution with client / server sides to have remote AI process
+* Standardized Audio interfaces
 * Efficient Speech-to-text technology using a local instance of OpenAI Whisper
 * Natural Text-to-Speech technology using a local instance of Tacotron 2 with Coqui-TTS
 * Response generation using a Large Language Model (LLM) customised to act as an english coach
