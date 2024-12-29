@@ -2,13 +2,13 @@ from typing import List, Literal
 from pydantic import BaseModel
 import uuid
 
+
 class Message(BaseModel):
     role: Literal['user', 'assistant', 'system']
     content: str
 
     def is_assistant_message(self):
         return self.role == 'assistant'
-
 
 
 class ChatResponseChunk(BaseModel):

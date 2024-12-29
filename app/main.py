@@ -26,7 +26,7 @@ from fastapi.requests import Request
 from pathlib import Path
 from chatbot_server import ChatbotServer, logger, DEFAULT_LOCAL_OLLAMA_SERVER
 from schemas import ChatResponseChunk, Message, NewChat
-
+from typing import List
 LOCAL_WEB_SERVER = True
 LOCAL_OLLAMA_SERVER = True
 
@@ -103,12 +103,12 @@ async def post_sound(sound_file: UploadFile = File(...), messages: str = Form(..
 
 
 @app.post("/start_chat", response_model=NewChat)
-async def start_chat(messages: list[Message], background_tasks: BackgroundTasks):
+async def start_chat(messages: List[Message], background_tasks: BackgroundTasks):
     """
     Process to assistant response based on a chat history, launch the job in background tasks
 
     Args:
-        messages (list[Message]): A list of user and assistant messages history
+        messages (List[Message]): A list of user and assistant messages history
     Returns:
         NewChat: The result of the chat session, the background task will populate response in an async way.
     """
@@ -118,8 +118,7 @@ async def start_chat(messages: list[Message], background_tasks: BackgroundTasks)
     # Add a task to prepare the response for the newly created chat session
     logger.info(f"Background process for chat {new_chat.session_id} is starting...")
     background_tasks.add_task(chatbot_server.build_chat_response, session_id=new_chat.session_id)
-    # background_tasks.add_task(chatbot_server._prepare_chat_response, session_id=new_chat.session_id)
-    # await chatbot_server.prepare_response_task(session_id=new_chat.session_id)
+    # await chatbot_server.build_chat_response(session_id=new_chat.session_id)
 
     return new_chat
 

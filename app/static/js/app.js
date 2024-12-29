@@ -33,7 +33,6 @@ recordBtn.addEventListener("click", async () => {
 
             addMessage("user", text);
 
-            // chatHistory.push({ role: "system", content: "Use separated simple phrases" });
             // Add the user's question to the chat history
             chatHistory.push({ role: "user", content: text });
 

@@ -20,15 +20,11 @@ logging.basicConfig(level=log_level)
 logger.info('Start')
 asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-
-
-
-
 """STT MANAGERS"""
 # https://github.com/openai/whisper
 import whisper
 
-whisper_logger= logging.getLogger("TTS")
+whisper_logger = logging.getLogger("TTS")
 whisper_logger.setLevel(level=log_level)
 
 """TTS MANAGERS"""
@@ -53,9 +49,10 @@ os.environ['TTS_HOME'] = COQUI_TTS_MODELS_PATH
 
 DEFAULT_LOCAL_OLLAMA_SERVER = "http://localhost:11434"
 
+
 class ChatbotServer:
     def __init__(self, use_kb: bool = False,
-                 use_print: bool = True, ollama_server: str =DEFAULT_LOCAL_OLLAMA_SERVER,
+                 use_print: bool = True, ollama_server: str = DEFAULT_LOCAL_OLLAMA_SERVER,
                  lang='en'):
         self.audio_convert_rate = 16000
         self.audio_convert_width = 2
@@ -70,7 +67,8 @@ class ChatbotServer:
         self.whisper_model = None
         self.language = lang
         logger.info('Now loading WHISPER model')
-        self.whisper_model = whisper.load_model("base", download_root=WHISPER_STT_MODELS_PATH)   # Default path is "C:\Users\USER\.cache\whisper"
+        self.whisper_model = whisper.load_model("base",
+                                                download_root=WHISPER_STT_MODELS_PATH)  # Default path is "C:\Users\USER\.cache\whisper"
         # self.whisper_model = whisper.load_model("turbo", download_root=WHISPER_STT_MODELS_PATH) # Turbo is a bit faster but x6 bigger
         logger.info('WHISPER model is loaded')
 
@@ -112,7 +110,6 @@ class ChatbotServer:
             self.tts_lang = self.language
         else:
             self.tts_lang = None
-
 
     async def _async_stream_response(self, messages):
         # This is the wrapped call to Ollama API
@@ -183,7 +180,7 @@ class ChatbotServer:
         Returns:
             str: Transcribed text from the audio.
         """
-        if True:
+        try:
             # Read audio bytes into a NumPy array
             audio_data = io.BytesIO(browser_audio_data)
 
@@ -213,9 +210,9 @@ class ChatbotServer:
 
             return result['text']
 
-        # except Exception as e:
-        #     logger.error(f"Error processing audio: {e}")
-        #     return "Error processing audio"
+        except Exception as e:
+            logger.error(f"Error processing audio: {e}")
+            return "Error processing audio"
 
     def _prepare_audio_response_from_tts_to_browser(self, tts_audio_data):
         # Normalize and convert to int16
@@ -228,22 +225,6 @@ class ChatbotServer:
         audio_chunk_base64 = base64.b64encode(audio_buffer.read()).decode("utf-8")
         return audio_chunk_base64
 
-    #
-    # async def async_generate_response(self, messages: list):
-    #     line = []
-    #     async for chunk in self._async_stream_response(messages):
-    #         line.append(chunk)
-    #         if self._should_break_chunk(chunk=chunk) and len("".join(line)) > 50:
-    #             audio_data = self._build_audio_response(content_to_output="".join(line), speaker=self.tts_speaker)
-    #             yield "".join(line), audio_data, self.tts.synthesizer.output_sample_rate
-    #             line = []
-    #     else:
-    #         if len(line) > 0:
-    #             try:
-    #                 audio_data = self._build_audio_response(content_to_output="".join(line), speaker=self.tts_speaker)
-    #             except:
-    #                 audio_data = None
-    #             yield "".join(line), audio_data, self.tts.synthesizer.output_sample_rate
 
     @classmethod
     def _split_buffer_on_char(cls, text_buffer: str, split_on: str):
