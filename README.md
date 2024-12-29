@@ -1,4 +1,4 @@
-**My personal english coach**
+**My Free Personal English Coach**
 =============================
 
 A fully self-hosted conversational chatbot built on a customized LLama 3.2 LLM and wrapped with OpenAI Whisper and Coqui-TTS for real-time speech-to-text and text-to-speech conversions.
@@ -58,8 +58,8 @@ sequenceDiagram
        participant LLM as Language Model (LLM)
        participant PP as Phrases Processor
        participant TTS as Text-to-Speech
+       participant AOP as Audio Processor
     end
-    participant AOP as Audio Processor
     participant AO as Audio Speaker
 
     User ->> Mic: Speak
@@ -113,8 +113,9 @@ The whole installation will use ~10Go:
 * Ollama server provided with Llama3.2: ~2Go
 * Python packages including PyTorch with CUDA: ~6Go
 * OpenAI whisper model: base ~150Mo (default), turbo ~1,6Go
-* Coqui-TTS Tacotron 2 model ~1Go
+* Coqui-TTS Tacotron 2 model ~1Go  
 
+N.B: The video demos were carried out entirely on a Lenovo Thinkpad P52 laptop equipped with an NVIDIA Quadro P1000 GPU.  
 
 # Features
 
