@@ -52,8 +52,8 @@ allowing audio chunks from earlier responses to play while the LLM is still gene
 sequenceDiagram
     participant User
     participant Mic as Microphone
-    participant AIP as Audio Processor
     box Transparent Server Component
+       participant AIP as Audio Processor
        participant STT as Speech-to-Text
        participant LLM as Language Model (LLM)
        participant PP as Phrases Processor
