@@ -51,29 +51,27 @@ allowing audio chunks from earlier responses to play while the LLM is still gene
 ```mermaid
 sequenceDiagram
     participant User
-    participant Mic as Microphone
+    participant AHW as Audio Hardware
     box Transparent Server Component
-       participant AIP as Audio Processor
+       participant AP as Audio Processor
        participant STT as Speech-to-Text
        participant LLM as Language Model (LLM)
        participant PP as Phrases Processor
        participant TTS as Text-to-Speech
-       participant AOP as Audio Processor
     end
-    participant AO as Audio Speaker
 
-    User ->> Mic: Speak
-    Mic ->> AIP: RAW Audio
-    AIP ->> STT: Normalized WAV
+    User ->> AHW: Speak
+    AHW ->> AP: RAW Audio
+    AP ->> STT: Normalized WAV
     alt Transcription Ready?
         STT -->> LLM: Text
         loop Token Streaming
             LLM -->> PP: Stream tokens
             alt A Phrase is ready ?
                 PP -->> TTS: Phrase
-                TTS -->> AOP: Audio chunk
-                AOP -->> AO: RAW Audio
-                AO -->> User: Speak
+                TTS -->> AP: Audio chunk
+                AP -->> AHW: Normalized WAV
+                AHW -->> User: Speak
             else No Phrases Detected
                 PP --> PP: Wait for more tokens
             end
