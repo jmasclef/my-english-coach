@@ -84,15 +84,14 @@ sequenceDiagram
 ```
 
 ## Explanation:
-1. **User Speaks**: The user provides speech input captured as audio content.
-2. **Speech-to-Text (STT)**: The spoken words are converted into text.
-3. **Transcription Ready?**: If the transcription is ready, it is sent to the Language Model (LLM).
-4. **Token Streaming**: The LLM starts streaming tokens continuously.
+1. **User Speaks**: The user provides speech input captured as audio content through the audio processor.
+2. **Speech-to-Text (STT)**: The spoken words are converted into text, using current chat history for better results.
+3. **Token Streaming**: The LLM starts streaming tokens continuously.
 5. **Phrase Processor**: As tokens are streamed, ending phrases are detected.
 6. **Phrases Detected?**: If phrases are detected:
    - They are sent to Text-to-Speech (TTS).
-   - TTS generates audio chunks.
-   - AudioOutput plays the generated audio chunks.
+   - TTS generates audio chunks for each phrase.
+   - Each phrase is sent as response chunk with its normalized audio transcription
 7. **No Phrases Detected**: If no phrases are detected yet, Phrase Processor continues waiting for more tokens.
 
 This sequence diagram effectively conveys how each component interacts asynchronously to provide real-time audio
