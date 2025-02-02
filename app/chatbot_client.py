@@ -73,7 +73,8 @@ class ChatbotClient:
         return {'fr', 'en'}
 
     def create_chat_session(self, messages: List[Message]):
-        return ChatSession(speaker=self.chatbot_server.tts_speaker, messages=messages)
+        # return ChatSession(speaker=self.chatbot_server.tts_speaker, messages=messages)
+        return ChatSession(speaker='', messages=messages)
 
     async def question_answer(self, chat_session: ChatSession):
         # Store question in chat history => chat history is the material for ollama
@@ -85,7 +86,7 @@ class ChatbotClient:
             # Play audio using sounddevice
             sounddevice.wait()  # Wait until previous playback finishes
             if audio_data is not None:
-                sounddevice.play(audio_data, samplerate=self.chatbot_server.tts.synthesizer.output_sample_rate)
+                sounddevice.play(audio_data, samplerate=self.chatbot_server.tts_output_sample_rate)
             responses.append(sentence)
         else:
             response = "".join(responses)
@@ -114,6 +115,7 @@ if __name__ == '__main__':
         chat_session = chatbot_client.create_chat_session(messages=[first_message])
         while (question := await chatbot_client.question_answer(chat_session=chat_session)) is not None:
             pass
+
 
 
     # Run the async main function

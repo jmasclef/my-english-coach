@@ -9,7 +9,7 @@ import base64
 
 from ollama import AsyncClient as OllamaAsyncClient
 import logging
-
+import torch
 from schemas import ChatResponseChunk, Message, NewChat, ChatSession
 from typing import List
 
@@ -30,6 +30,10 @@ whisper_logger.setLevel(level=log_level)
 """TTS MANAGERS"""
 # Option 1 coqui-tts
 from TTS.api import TTS
+
+# Option 2 kokoro
+from kokoro import KPipeline
+
 from TTS.api import logger as tts_logger
 import numpy as np
 
@@ -85,6 +89,7 @@ class ChatbotServer:
             # self.tts = TTS(model_name="tts_models/en/ljspeech/fast_pitch", progress_bar=True).to('cuda') # good 440Mo but single speaker
 
             # self.tts = TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2", progress_bar=True).to('cuda') # Great sound with speakers but a bit slow
+            # Best balance is this:
             self.tts = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC_ph", progress_bar=True, ).to(
                 'cuda')  # good ~1go and single speaker
             # self.tts = TTS(model_name="tts_models/en/ljspeech/tacotron2-DCA", progress_bar=True).to('cuda') # glitch on first !  ~400Mo
@@ -92,6 +97,9 @@ class ChatbotServer:
 
             # self.tts = TTS(model_name="tts_models/en/ek1/tacotron2", progress_bar=True).to('cuda') # slow! ~500Mo
             # self.tts = TTS(model_name="tts_models/en/ljspeech/vits", progress_bar=True, gpu=True) " didn't work
+
+            # self.tts = KPipeline(lang_code='b')
+
         elif lang == 'fr':
             self.tts = TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2", progress_bar=True).to('cuda')
             # self.tts = TTS(model_name="tts_models/fr/mai/tacotron2-DDC", progress_bar=True).to('cuda')
@@ -99,6 +107,7 @@ class ChatbotServer:
             logger.critical(f"No known TTS model for lan='{lang}', check 'tts --list_models' ")
 
         logger.info("coqui-tts model loaded...")
+        self.tts_output_sample_rate = self.tts.synthesizer.output_sample_rate
         if self.tts.is_multi_speaker:
             # self.tts_speaker = random_choice(speakers)
             self.tts_speaker = random_choice(self.tts.speakers)
@@ -110,6 +119,18 @@ class ChatbotServer:
             self.tts_lang = self.language
         else:
             self.tts_lang = None
+
+        # logger.info("kokoro model loaded...")
+        # self.tts_output_sample_rate = 24000
+        # if self.tts.voices:
+        #     self.tts_speaker = random_choice(self.tts.speakers)
+        #     self.tts.is_multi_speaker=True
+        #     logger.info(f"Multiple speakers, chose: {self.tts_speaker}")
+        # else:
+        #     self.tts_speaker = None
+        #     logger.info("Single speaker in the model")
+        #     self.tts.is_multi_speaker=False
+
 
     async def _async_stream_response(self, messages):
         # This is the wrapped call to Ollama API
@@ -150,14 +171,32 @@ class ChatbotServer:
         try:
             logger.debug(f"Sent to coqui: {content_to_output}")
             audio_data = self.tts.tts(content_to_output, speaker=target_speaker, language=self.tts_lang,
-                                      split_sentences=True)
+                                      split_sentences=True,speed=1.5)
         except Exception as e:
             logger.error(f"Could not process audio for :'{content_to_output}'")
             logger.error(f"Exception :'{str(e)}'")
             return None
 
+        # generator = self.tts(
+        #     content_to_output,
+        #     voice='af_heart',  # <= change voice here
+        #     speed=1
+        # )
+        # for _, _, audio_data in generator:
+        #     pass
+
         # Normalize audio for playback
-        audio_data = np.int16(audio_data / np.max(np.abs(audio_data)) * 32767)
+        if isinstance(audio_data, torch.Tensor):
+            # Compute the maximum absolute value in the tensor
+            max_abs = audio_data.abs().max()
+
+            # Normalize the tensor to be between -1 and 1
+            normalized_tensor = audio_data / (max_abs + 1e-9)
+
+            # Convert the normalized tensor to a NumPy array
+            audio_data = normalized_tensor.numpy()
+        else:
+            audio_data = np.int16(audio_data / np.max(np.abs(audio_data)) * 32767)
 
         return audio_data
 
@@ -216,8 +255,17 @@ class ChatbotServer:
 
     def _prepare_audio_response_from_tts_to_browser(self, tts_audio_data):
         # Normalize and convert to int16
-        audio_data = np.int16(tts_audio_data / np.max(np.abs(tts_audio_data)) * 32767)
+        if isinstance(tts_audio_data, torch.Tensor):
+            # Compute the maximum absolute value in the tensor
+            max_abs = tts_audio_data.abs().max()
 
+            # Normalize the tensor to be between -1 and 1
+            normalized_tensor = tts_audio_data / (max_abs + 1e-9)
+
+            # Convert the normalized tensor to a NumPy array
+            audio_data = normalized_tensor.numpy()
+        else:
+            audio_data = np.int16(tts_audio_data / np.max(np.abs(tts_audio_data)) * 32767)
         # Write the audio to a BytesIO buffer
         audio_buffer = io.BytesIO()
         soundfile.write(audio_buffer, audio_data, 22050, format='WAV', subtype='PCM_16')  # PCM 16-bit subtype
@@ -285,7 +333,7 @@ class ChatbotServer:
             logger.info(f"Multiple speakers, chose '{self.tts_speaker}' for session {new_chat_session.session_id}")
         self.chat_sessions[new_chat_session.session_id] = new_chat_session
 
-        return NewChat(session_id=new_chat_session.session_id, sample_rate=self.tts.synthesizer.output_sample_rate)
+        return NewChat(session_id=new_chat_session.session_id, sample_rate=self.tts_output_sample_rate)
 
     async def build_chat_response(self, session_id):
         """

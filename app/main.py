@@ -35,14 +35,21 @@ if LOCAL_WEB_SERVER:
     web_server_port = 8080
     website_address = f"http://{web_server_host_address}:{web_server_port}"
 else:
-    web_server_host_address = "192.168.1.150"
-    web_server_port = 8000
-    website_address = 'https://anyapp.julienmasclef2.synology.me:54321'
+    # Use separate custom file conf
+    from app.my_conf import web_server_host_address, web_server_port, website_address
+    # OR direct values
+    # web_server_host_address = "192.168.169.1"
+    # web_server_port = 8000
+    # Warning to execute separate client and server hosts need SSL for micro
+    # website_address = 'https://anyapp.anydomain.com'
 
 if LOCAL_OLLAMA_SERVER:
     ollama_server = DEFAULT_LOCAL_OLLAMA_SERVER
 else:
-    ollama_server = "https://ollama-api.julienmasclef2.synology.me:60001"
+    # Use separate custom file conf
+    from app.my_conf import ollama_server
+    # OR direct values
+    # ollama_server = "https://ollama-api.anydomain.com:11434"
 
 logger.info(f"Ollama server: {ollama_server}")
 logger.info(f"Website address: {website_address}")
