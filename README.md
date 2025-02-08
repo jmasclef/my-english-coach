@@ -118,12 +118,13 @@ N.B: The video demos were carried out entirely on a Lenovo Thinkpad P52 laptop e
 
 * Conversational, _speech-to-speech_, real-time AI chatbot
 * Split solution with client / server sides to have remote AI process
-* Standardized Audio interfaces
+* Standardized Audio interfaces (WAV 16kHz, 16bits, Mono)
 * Efficient Speech-to-text technology using a local instance of OpenAI Whisper
 * Natural Text-to-Speech technology using a local instance of Tacotron 2 with Coqui-TTS
 * Response generation using a Large Language Model (LLM) customised to act as an english coach
 * Asynchronous and paralleled processes for LLM token generation and audio chunks preparation
 * Integration with FastAPI framework for self-hosted split client/server
+* Websockets communication for better live client/server exchanges
 
 # Installation
 ## NVIDIA GPU with driver and CUDA ?
