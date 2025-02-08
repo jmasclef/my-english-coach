@@ -18,25 +18,32 @@ The API server store chat history only during the preparation of a response
 """
 from http.client import HTTPResponse
 import json
-from fastapi import FastAPI, UploadFile, File, BackgroundTasks, status, Form
+import logging
+import asyncio
+
+tasks_group= asyncio.TaskGroup()
+
+from fastapi import FastAPI, UploadFile, File, BackgroundTasks, status, Form, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
 from pathlib import Path
-from chatbot_server import ChatbotServer, logger, DEFAULT_LOCAL_OLLAMA_SERVER
+from chatbot_server import ChatbotServer, DEFAULT_LOCAL_OLLAMA_SERVER
 from schemas import ChatResponseChunk, Message, NewChat
-from typing import List
+from typing import List, Dict
 LOCAL_WEB_SERVER = True
 LOCAL_OLLAMA_SERVER = True
+USE_WEBSOCKET= True
 
 if LOCAL_WEB_SERVER:
     web_server_host_address = "127.0.0.1"
     web_server_port = 8080
     website_address = f"http://{web_server_host_address}:{web_server_port}"
+    websocket_address = f"ws://{web_server_host_address}:{web_server_port}"
 else:
     # Use separate custom file conf
-    from app.my_conf import web_server_host_address, web_server_port, website_address
+    from app.my_conf import web_server_host_address, web_server_port, website_address, websocket_address
     # OR direct values
     # web_server_host_address = "192.168.169.1"
     # web_server_port = 8000
@@ -51,6 +58,10 @@ else:
     # OR direct values
     # ollama_server = "https://ollama-api.anydomain.com:11434"
 
+log_level = logging.INFO
+logger = logging.getLogger('uvicorn.error')
+logging.basicConfig(level=logging.INFO)
+logger.info('Start')
 logger.info(f"Ollama server: {ollama_server}")
 logger.info(f"Website address: {website_address}")
 # Directory setup
@@ -63,8 +74,10 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # Template setup
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
-chatbot_server = ChatbotServer(lang='en', ollama_server=ollama_server)
+chatbot_server = ChatbotServer(lang='en', ollama_server=ollama_server, logger=logger)
 
+# WebSocket clients storage
+websocket_sessions: Dict[WebSocket, bool] = {}
 
 @app.get("/")
 async def serve_frontend(request: Request):
@@ -79,9 +92,44 @@ async def serve_frontend(request: Request):
 async def get_host_js(request: Request):
     return templates.TemplateResponse(request=request,
                                       name="host.js",
-                                      context={"website_address": website_address},
+                                      context={"website_address": website_address,
+                                               "websocket_address":websocket_address,
+                                               "use_websocket":USE_WEBSOCKET},
                                       media_type="application/javascript")
 
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket, background_tasks: BackgroundTasks):
+    await websocket.accept()
+    chatbot_server.websocket_sessions[websocket]=True
+    try:
+        # Receive JSON payload containing messages
+        json_data = await websocket.receive_json()
+        messages = [Message(**msg) for msg in json_data.get("messages", [])]
+        new_chat = chatbot_server.start_chat(messages=messages)
+        logger.info(f"Received chat history with {len(messages)} messages")
+
+        # # Receive binary sound file
+        # binary_audio_data = await websocket.receive_bytes()
+        # transcription = chatbot_server.catch_user_question_from_audio_browser(binary_audio_data, messages)
+        # messages.append(Message(role='assistant', content=transcription))
+
+        # Add a task to prepare the response for the newly created chat session
+        # background_tasks.add_task(chatbot_server.build_chat_response, session_id=new_chat.session_id)
+        await chatbot_server.process_websocket_chat_response(new_chat.session_id,websocket)
+
+        # background_tasks.add_task(chatbot_server.process_websocket_chat_response,
+        #                           session_id=new_chat.session_id,
+        #                           websocket=websocket)
+
+        # Debug output (optional)
+
+        # Respond to client
+        # await websocket.send_text("Data received successfully")
+
+    except WebSocketDisconnect:
+        chatbot_server.websocket_sessions[websocket] = False
+        logger.info("Client disconnected")
 
 @app.post("/speech-to-text")
 async def post_sound(sound_file: UploadFile = File(...), messages: str = Form(...)):
@@ -123,7 +171,6 @@ async def start_chat(messages: List[Message], background_tasks: BackgroundTasks)
     new_chat = chatbot_server.start_chat(messages=messages)
 
     # Add a task to prepare the response for the newly created chat session
-    logger.info(f"Background process for chat {new_chat.session_id} is starting...")
     background_tasks.add_task(chatbot_server.build_chat_response, session_id=new_chat.session_id)
     # await chatbot_server.build_chat_response(session_id=new_chat.session_id)
 
@@ -144,7 +191,6 @@ async def stream_chat(session_id: str):
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(
         app="main:app",  # "main" is the filename, "app" is the FastAPI instance
         host=web_server_host_address,  # Host address

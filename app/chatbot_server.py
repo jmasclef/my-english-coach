@@ -1,5 +1,6 @@
 import io
 import os.path
+import sys
 import uuid
 import re
 import soundfile  # To read streamed wave
@@ -11,13 +12,9 @@ from ollama import AsyncClient as OllamaAsyncClient
 import logging
 import torch
 from schemas import ChatResponseChunk, Message, NewChat, ChatSession
-from typing import List
+from typing import List, Dict
 
-log_level = logging.FATAL
 
-logger = logging.getLogger("CHAT-WITH-OLLAMA-SERVER")
-logging.basicConfig(level=log_level)
-logger.info('Start')
 asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 """STT MANAGERS"""
@@ -25,7 +22,7 @@ asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 import whisper
 
 whisper_logger = logging.getLogger("TTS")
-whisper_logger.setLevel(level=log_level)
+whisper_logger.setLevel(level=logging.FATAL)
 
 """TTS MANAGERS"""
 # Option 1 coqui-tts
@@ -37,13 +34,13 @@ from kokoro import KPipeline
 from TTS.api import logger as tts_logger
 import numpy as np
 
-import logging
-
-log_level = logging.INFO
-
-logger = logging.getLogger("STT-ollama-TTS")
-logging.basicConfig(level=log_level)
-logger.info('Start')
+# import logging
+#
+# log_level = logging.INFO
+#
+# logger = logging.getLogger("STT-ollama-TTS")
+# logging.basicConfig(level=log_level)
+# logger.info('Start')
 
 PROJECT_ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 COQUI_TTS_MODELS_PATH = os.path.normpath(os.path.join(PROJECT_ROOT_PATH, "../coqui_models"))
@@ -54,13 +51,24 @@ os.environ['TTS_HOME'] = COQUI_TTS_MODELS_PATH
 DEFAULT_LOCAL_OLLAMA_SERVER = "http://localhost:11434"
 
 
+
 class ChatbotServer:
     def __init__(self, use_kb: bool = False,
-                 use_print: bool = True, ollama_server: str = DEFAULT_LOCAL_OLLAMA_SERVER,
+                 use_print: bool = True,
+                 ollama_server: str = DEFAULT_LOCAL_OLLAMA_SERVER,
+                 logger=None,
                  lang='en'):
         self.audio_convert_rate = 16000
         self.audio_convert_width = 2
         self.chat_sessions = dict()
+        self.websocket_sessions = dict()
+        if logger:
+            self.logger= logger
+        else:
+            log_level = logging.INFO
+            self.logger = logging.getLogger("MY-ENGLISH-COACH-CHATBOT-SERVER")
+            logging.basicConfig(level=log_level)
+            self.logger.info('Start')
         if lang == 'fr':
             self.model = 'llama3.2'
         else:
@@ -70,18 +78,18 @@ class ChatbotServer:
 
         self.whisper_model = None
         self.language = lang
-        logger.info('Now loading WHISPER model')
+        self.logger.info('Now loading WHISPER model')
         self.whisper_model = whisper.load_model("base",
                                                 download_root=WHISPER_STT_MODELS_PATH)  # Default path is "C:\Users\USER\.cache\whisper"
         # self.whisper_model = whisper.load_model("turbo", download_root=WHISPER_STT_MODELS_PATH) # Turbo is a bit faster but x6 bigger
-        logger.info('WHISPER model is loaded')
+        self.logger.info('WHISPER model is loaded')
 
         speakers = ['Asya Anara', 'Gitta Nikolina', 'Sofia Hellen', 'Uta Obando',
                     'Dionisio Schuyler', 'Adde Michal', 'Ludvig Milivoj', 'Torcull Diarmuid']
         # Initialize TTS model
         # tts --list_models
         # Models are stored in 'C:\Users\USER\AppData\Local\tts'
-        logger.info(f"Load coqui-tts {lang} model...")
+        self.logger.info(f"Load coqui-tts {lang} model...")
         #  pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
         if lang == 'en':
             # speedy-speech ko and fast_pitch ok
@@ -104,31 +112,31 @@ class ChatbotServer:
             self.tts = TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2", progress_bar=True).to('cuda')
             # self.tts = TTS(model_name="tts_models/fr/mai/tacotron2-DDC", progress_bar=True).to('cuda')
         else:
-            logger.critical(f"No known TTS model for lan='{lang}', check 'tts --list_models' ")
+            self.logger.critical(f"No known TTS model for lan='{lang}', check 'tts --list_models' ")
 
-        logger.info("coqui-tts model loaded...")
+        self.logger.info("coqui-tts model loaded...")
         self.tts_output_sample_rate = self.tts.synthesizer.output_sample_rate
         if self.tts.is_multi_speaker:
             # self.tts_speaker = random_choice(speakers)
             self.tts_speaker = random_choice(self.tts.speakers)
-            logger.info(f"Multiple speakers, chose: {self.tts_speaker}")
+            self.logger.info(f"Multiple speakers, chose: {self.tts_speaker}")
         else:
             self.tts_speaker = None
-            logger.info("Single speaker in the model")
+            self.logger.info("Single speaker in the model")
         if self.tts.is_multi_lingual:
             self.tts_lang = self.language
         else:
             self.tts_lang = None
 
-        # logger.info("kokoro model loaded...")
+        # self.logger.info("kokoro model loaded...")
         # self.tts_output_sample_rate = 24000
         # if self.tts.voices:
         #     self.tts_speaker = random_choice(self.tts.speakers)
         #     self.tts.is_multi_speaker=True
-        #     logger.info(f"Multiple speakers, chose: {self.tts_speaker}")
+        #     self.logger.info(f"Multiple speakers, chose: {self.tts_speaker}")
         # else:
         #     self.tts_speaker = None
-        #     logger.info("Single speaker in the model")
+        #     self.logger.info("Single speaker in the model")
         #     self.tts.is_multi_speaker=False
 
 
@@ -154,7 +162,7 @@ class ChatbotServer:
 
         # result = self.whisper_model.transcribe(audio_array)
         result = self.whisper_model.transcribe(audio_array, language=self.language, fp16=False)
-        logger.info(f"Whisper STT result: {result}")
+        self.logger.info(f"Whisper STT result: {result}")
         return result['text']
 
     def _build_audio_response(self, content_to_output: str, speaker: str = None):
@@ -165,16 +173,16 @@ class ChatbotServer:
         content_to_output = content_to_output.replace('...', '. ')
         content_to_output = content_to_output.replace('..', '. ')
         # content_to_output = self.clean_string(string_to_clean=content_to_output)
-        logger.debug(f"Content to output: {content_to_output}")
+        self.logger.debug(f"Content to output: {content_to_output}")
 
         # Generate TTS audio as a numpy array
         try:
-            logger.debug(f"Sent to coqui: {content_to_output}")
+            self.logger.debug(f"Sent to coqui: {content_to_output}")
             audio_data = self.tts.tts(content_to_output, speaker=target_speaker, language=self.tts_lang,
                                       split_sentences=True,speed=1.5)
         except Exception as e:
-            logger.error(f"Could not process audio for :'{content_to_output}'")
-            logger.error(f"Exception :'{str(e)}'")
+            self.logger.error(f"Could not process audio for :'{content_to_output}'")
+            self.logger.error(f"Exception :'{str(e)}'")
             return None
 
         # generator = self.tts(
@@ -225,7 +233,7 @@ class ChatbotServer:
 
             audio_array, sampling_rate = soundfile.read(audio_data)
 
-            logger.info(
+            self.logger.info(
                 f"Received audio format: {audio_array.dtype}, Sampling rate: {sampling_rate}, Shape: {audio_array.shape}")
 
             # Ensure the sample rate matches 16kHz
@@ -237,7 +245,7 @@ class ChatbotServer:
                 audio_array = audio_array.astype(np.float32)
 
             # Log the processed audio array details
-            logger.info(f"Processed audio shape: {audio_array.shape}, dtype: {audio_array.dtype}")
+            self.logger.info(f"Processed audio shape: {audio_array.shape}, dtype: {audio_array.dtype}")
 
             # prepare prompt (for context)
             initial_prompt = " ".join(message.content for message in messages) if messages else None
@@ -245,12 +253,12 @@ class ChatbotServer:
             # Transcribe the audio with Whisper
             result = self.whisper_model.transcribe(audio_array, initial_prompt=initial_prompt, language=self.language,
                                                    fp16=False, temperature=0)
-            logger.info(f"Whisper STT result: {result}")
+            self.logger.info(f"Whisper STT result: {result}")
 
             return result['text']
 
         except Exception as e:
-            logger.error(f"Error processing audio: {e}")
+            self.logger.error(f"Error processing audio: {e}")
             return "Error processing audio"
 
     def _prepare_audio_response_from_tts_to_browser(self, tts_audio_data):
@@ -330,7 +338,7 @@ class ChatbotServer:
         new_chat_session = ChatSession(speaker=self.tts_speaker, messages=messages)
         if self.tts.is_multi_speaker and not (any([message.role == 'assistant' for message in messages])):
             self.tts_speaker = random_choice(self.tts.speakers)
-            logger.info(f"Multiple speakers, chose '{self.tts_speaker}' for session {new_chat_session.session_id}")
+            self.logger.info(f"Multiple speakers, chose '{self.tts_speaker}' for session {new_chat_session.session_id}")
         self.chat_sessions[new_chat_session.session_id] = new_chat_session
 
         return NewChat(session_id=new_chat_session.session_id, sample_rate=self.tts_output_sample_rate)
@@ -339,19 +347,47 @@ class ChatbotServer:
         """
         This method will be called as a background task
         """
+        self.logger.debug(f"Background process for chat {session_id} is launched")
         chat_session = self._get_chat_session(session_id)
         async for sentence, tts_audio in self.yield_response_messages(chat_session=chat_session):
-            logger.debug(f"Background process for chat {session_id} is adding chunk")
+            self.logger.debug(f"Background process for chat {session_id} is adding chunk")
             if tts_audio is not None:
                 audio_for_browser = self._prepare_audio_response_from_tts_to_browser(tts_audio)
             else:
-                logger.warning(f"No audio chunk for text:{sentence}")
+                self.logger.warning(f"No audio chunk for text:{sentence}")
                 audio_for_browser = None
             response_chunk = ChatResponseChunk(status='STREAM', text_chunk=sentence, audio_chunk=audio_for_browser)
             chat_session.streaming_response.append(response_chunk)
         else:
             chat_session.streaming_response.append(ChatResponseChunk(status='FINISHED'))
-            logger.info(f"Background process for chat {session_id} is finished.")
+            self.logger.info(f"Background process for chat {session_id} is finished.")
+
+    async def process_websocket_chat_response(self, session_id, websocket):
+        """
+        This method will be called as a background task
+        """
+        self.logger.info(f"Background process launched for {session_id}")
+        chat_session = self._get_chat_session(session_id)
+        async for sentence, tts_audio in self.yield_response_messages(chat_session=chat_session):
+            self.logger.debug(f"Background process for chat {session_id} is adding chunk")
+            if tts_audio is not None:
+                audio_for_browser = self._prepare_audio_response_from_tts_to_browser(tts_audio)
+            else:
+                self.logger.warning(f"No audio chunk for text:{sentence}")
+                audio_for_browser = None
+            response_chunk = ChatResponseChunk(status='STREAM', text_chunk=sentence, audio_chunk=audio_for_browser)
+            if self.websocket_sessions[websocket]:
+                await websocket.send_json(data=response_chunk.model_dump())
+            else:
+                del self.chat_sessions[session_id]
+                break
+        else:
+            response_chunk = ChatResponseChunk(status='FINISHED')
+            await websocket.send_json(data=response_chunk.model_dump())
+            del self.chat_sessions[session_id]
+            self.logger.info(f"Background process for chat {session_id} is finished.")
+
+
 
     async def stream_chat(self, session_id):
         chat_session = self._get_chat_session(session_id=session_id)
