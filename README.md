@@ -293,11 +293,14 @@ python chatbot_client.py
 ```
 
 ## Using the Telegram client
+To use telegram as mobile client, you need to create your own telegram bot (free) and connect it to the app using its bot ID  
+Go to telegram BOT father https://telegram.me/BotFather, create your bot and get its ID      
 
-Go to telegram BOT father https://telegram.me/BotFather
-Create your bot and get its bot ID => You will only need the bot ID    
 Complete your local file `./app/myconf.py'` with bot ID  
+
 **Using telegram, you can type clear text message to correct misunderstanding of STT**  
+
+**Telegram uses OGG audio format for voice messages, this conversion is be done using embedded FFMPEG executable.**
 
 ```bash
 cd app # Optional 
