@@ -5,6 +5,8 @@ A fully self-hosted conversational chatbot built on a customized LLama 3.2 LLM a
 Coqui-TTS for real-time speech-to-text and text-to-speech conversions.
 
 # Videos
+Youtube video demo - Telegram chat bot connector
+https://youtube.com/shorts/juFYC_syli8
 
 YouTube video demo - local website  
 https://www.youtube.com/shorts/ov97UJniI5M
