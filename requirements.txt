@@ -23,11 +23,15 @@ asyncio==3.4.3
 # logging installed by others
 
 # Text-To-Speech solution
-coqui-tts==0.25.1
+coqui-tts
 # kokoro
 
 # API web server
-fastapi==0.115.6
-uvicorn==0.34.0
-python-multipart==0.0.20
+fastapi
+uvicorn
+python-multipart
 websockets
+
+#Telegram API
+pyTelegramBotAPI
+ffmpeg-python

@@ -7,13 +7,12 @@ import soundfile  # To read streamed wave
 from random import choice as random_choice
 import asyncio
 import base64
-
+from my_conf import DEFAULT_LOCAL_OLLAMA_SERVER
 from ollama import AsyncClient as OllamaAsyncClient
 import logging
 import torch
 from schemas import ChatResponseChunk, Message, NewChat, ChatSession
 from typing import List, Dict
-
 
 asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
@@ -29,7 +28,7 @@ whisper_logger.setLevel(level=logging.FATAL)
 from TTS.api import TTS
 
 # Option 2 kokoro
-from kokoro import KPipeline
+# from kokoro import KPipeline
 
 from TTS.api import logger as tts_logger
 import numpy as np
@@ -48,9 +47,6 @@ COQUI_TTS_MODELS_PATH = os.path.normpath(os.path.join(PROJECT_ROOT_PATH, "../coq
 WHISPER_STT_MODELS_PATH = os.path.normpath(os.path.join(PROJECT_ROOT_PATH, "../whisper_models"))
 os.environ['TTS_HOME'] = COQUI_TTS_MODELS_PATH
 
-DEFAULT_LOCAL_OLLAMA_SERVER = "http://localhost:11434"
-
-
 
 class ChatbotServer:
     def __init__(self, use_kb: bool = False,
@@ -63,7 +59,7 @@ class ChatbotServer:
         self.chat_sessions = dict()
         self.websocket_sessions = dict()
         if logger:
-            self.logger= logger
+            self.logger = logger
         else:
             log_level = logging.INFO
             self.logger = logging.getLogger("MY-ENGLISH-COACH-CHATBOT-SERVER")
@@ -139,7 +135,6 @@ class ChatbotServer:
         #     self.logger.info("Single speaker in the model")
         #     self.tts.is_multi_speaker=False
 
-
     async def _async_stream_response(self, messages):
         # This is the wrapped call to Ollama API
         streamed_chat = await self._async_ollama_client.chat(
@@ -179,7 +174,7 @@ class ChatbotServer:
         try:
             self.logger.debug(f"Sent to coqui: {content_to_output}")
             audio_data = self.tts.tts(content_to_output, speaker=target_speaker, language=self.tts_lang,
-                                      split_sentences=True,speed=1.5)
+                                      split_sentences=True, speed=1.5)
         except Exception as e:
             self.logger.error(f"Could not process audio for :'{content_to_output}'")
             self.logger.error(f"Exception :'{str(e)}'")
@@ -261,7 +256,7 @@ class ChatbotServer:
             self.logger.error(f"Error processing audio: {e}")
             return "Error processing audio"
 
-    def _prepare_audio_response_from_tts_to_browser(self, tts_audio_data):
+    def prepare_audio_response_for_client(self, tts_audio_data):
         # Normalize and convert to int16
         if isinstance(tts_audio_data, torch.Tensor):
             # Compute the maximum absolute value in the tensor
@@ -278,9 +273,15 @@ class ChatbotServer:
         audio_buffer = io.BytesIO()
         soundfile.write(audio_buffer, audio_data, 22050, format='WAV', subtype='PCM_16')  # PCM 16-bit subtype
         audio_buffer.seek(0)  # Reset cursor
+        return audio_buffer
+
+    def prepare_audio_response_from_tts_to_browser(self, tts_audio_data):
+        """
+        Transform audio buffer into str
+        """
+        audio_buffer = self.prepare_audio_response_for_client(tts_audio_data=tts_audio_data)
         audio_chunk_base64 = base64.b64encode(audio_buffer.read()).decode("utf-8")
         return audio_chunk_base64
-
 
     @classmethod
     def _split_buffer_on_char(cls, text_buffer: str, split_on: str):
@@ -323,7 +324,7 @@ class ChatbotServer:
         async for chunk in self._async_stream_response(chat_session.messages_to_dict()):
             text_buffer += chunk
             text_data, new_text_buffer = self._split_if_possible(text_buffer=text_buffer)
-            if (text_data, new_text_buffer) != (None, None):
+            if (text_data, new_text_buffer) != (None, None) and text_data != '\n':
                 text_buffer = new_text_buffer
                 audio_data = self._build_audio_response(content_to_output=text_data, speaker=chat_session.speaker)
                 yield text_data, audio_data
@@ -334,8 +335,10 @@ class ChatbotServer:
                 audio_data = self._build_audio_response(content_to_output=text_data, speaker=chat_session.speaker)
                 yield text_data, audio_data
 
-    def start_chat(self, messages: List[Message]) -> NewChat:
+    def start_chat(self, messages: List[Message], set_chat_id_to: str = None) -> NewChat:
         new_chat_session = ChatSession(speaker=self.tts_speaker, messages=messages)
+        if set_chat_id_to:
+            new_chat_session.session_id = set_chat_id_to
         if self.tts.is_multi_speaker and not (any([message.role == 'assistant' for message in messages])):
             self.tts_speaker = random_choice(self.tts.speakers)
             self.logger.info(f"Multiple speakers, chose '{self.tts_speaker}' for session {new_chat_session.session_id}")
@@ -352,7 +355,7 @@ class ChatbotServer:
         async for sentence, tts_audio in self.yield_response_messages(chat_session=chat_session):
             self.logger.debug(f"Background process for chat {session_id} is adding chunk")
             if tts_audio is not None:
-                audio_for_browser = self._prepare_audio_response_from_tts_to_browser(tts_audio)
+                audio_for_browser = self.prepare_audio_response_from_tts_to_browser(tts_audio)
             else:
                 self.logger.warning(f"No audio chunk for text:{sentence}")
                 audio_for_browser = None
@@ -371,7 +374,7 @@ class ChatbotServer:
         async for sentence, tts_audio in self.yield_response_messages(chat_session=chat_session):
             self.logger.debug(f"Background process for chat {session_id} is adding chunk")
             if tts_audio is not None:
-                audio_for_browser = self._prepare_audio_response_from_tts_to_browser(tts_audio)
+                audio_for_browser = self.prepare_audio_response_from_tts_to_browser(tts_audio)
             else:
                 self.logger.warning(f"No audio chunk for text:{sentence}")
                 audio_for_browser = None
@@ -386,8 +389,6 @@ class ChatbotServer:
             await websocket.send_json(data=response_chunk.model_dump())
             del self.chat_sessions[session_id]
             self.logger.info(f"Background process for chat {session_id} is finished.")
-
-
 
     async def stream_chat(self, session_id):
         chat_session = self._get_chat_session(session_id=session_id)
